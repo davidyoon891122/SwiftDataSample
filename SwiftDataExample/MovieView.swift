@@ -8,14 +8,19 @@
 import SwiftUI
 import SwiftData
 
-struct MovieView: View {
-    @Query(sort: \Movie.title) var movies: [Movie]
-    @Environment(\.modelContext) var modelContext
+struct MovieView<Model>: View where Model: MovieViewModelProtocol {
+
+    @ObservedObject private var viewModel: Model
+
+    init(viewModel: Model) {
+        self.viewModel = viewModel
+    }
+
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(movies) { movie in
+                ForEach(viewModel.movies) { movie in
                     VStack(alignment: .leading) {
                         Text(movie.title)
                             .font(.headline)
@@ -23,7 +28,7 @@ struct MovieView: View {
                         Text(movie.cast.formatted(.list(type: .and)))
                     }
                 }
-                .onDelete(perform: deleteItems)
+                .onDelete(perform: viewModel.deleteItem)
             }
             .navigationTitle("MovieDB")
             .toolbar {
@@ -31,34 +36,21 @@ struct MovieView: View {
                     EditButton()
                 }
                 ToolbarItem {
-                    Button("Add Sample", action: addSample)
+                    Button("Add Sample", action: viewModel.addSample)
                 }
             }
             
         }
-    }
-
-    func addSample() {
-        withAnimation {
-            let movie = Movie(title: "Avatar", cast: ["Sam Worthington", "Zoe Saldaña", "Stephen Lang", "Michelle Rodriguez"])
-            modelContext.insert(movie)
-
-            try? modelContext.save()
-        }
-    }
-
-    func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(movies[index])
-            }
-            try? modelContext.save()
+        .onAppear {
+            viewModel.fetchData()
         }
     }
 
 }
 
 #Preview {
-    MovieView()
-        .modelContainer(for: Movie.self, inMemory: true)
+    let modelContext = ModelContext(try! ModelContainer(for: Movie.self))
+
+    MovieView(viewModel: MovieViewModel(modelContext: modelContext))
+
 }

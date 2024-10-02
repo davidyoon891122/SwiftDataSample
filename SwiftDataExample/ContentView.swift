@@ -10,8 +10,10 @@ import SwiftData
 
 struct ContentView: View {
 
+    @Environment(\.modelContext) var modelContext
+
     var body: some View {
-        MovieView()
+        MovieView(viewModel: MovieViewModel(modelContext: modelContext))
     }
 }
 
